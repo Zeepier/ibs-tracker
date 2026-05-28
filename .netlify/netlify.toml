@@ -1,0 +1,46 @@
+functionsDirectory = "C:\\Users\\jaanhol\\OneDrive - HvA\\Projects\\Github\\Test app\\ibs-tracker\\netlify\\functions"
+functionsDirectoryOrigin = "default"
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[build]
+publish = "C:\\Users\\jaanhol\\OneDrive - HvA\\Projects\\Github\\Test app\\ibs-tracker\\web-build"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "npx expo export:web && node -e \"require('fs').copyFileSync('public/push-sw.js','web-build/push-sw.js')\" && node scripts/generate-icons.js"
+functions = "C:\\Users\\jaanhol\\OneDrive - HvA\\Projects\\Github\\Test app\\ibs-tracker\\netlify\\functions"
+
+[build.environment]
+NODE_VERSION = "18"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions.send-reminders]
+schedule = "*/15 * * * *"
+
+[functions."*"]
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]

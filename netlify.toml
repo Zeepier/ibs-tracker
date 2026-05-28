@@ -1,0 +1,16 @@
+[build]
+  command = "npx expo export:web && node -e \"require('fs').copyFileSync('public/push-sw.js','web-build/push-sw.js')\" && node scripts/generate-icons.js"
+  publish = "web-build"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# React Navigation requires all routes to serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Run every 15 minutes to send due push notifications
+[functions."send-reminders"]
+  schedule = "*/15 * * * *"

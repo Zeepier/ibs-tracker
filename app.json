@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -20,10 +20,26 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.jnva.ibstracker",
+      "permissions": ["RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS"]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "name": "IBS Tracker",
+      "shortName": "IBS",
+      "description": "Track foods & symptoms to find your triggers",
+      "themeColor": "#2E7D32",
+      "backgroundColor": "#F2F6F3",
+      "display": "standalone",
+      "orientation": "portrait",
+      "lang": "en"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ad988039-936e-4734-a6b0-f4db5297202f"
+      }
+    },
+    "owner": "jnva"
   }
 }
