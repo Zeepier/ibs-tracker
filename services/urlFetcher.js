@@ -6,7 +6,7 @@ const isLocalhost = Platform.OS === 'web' &&
 
 const WEB_PROXY = isLocalhost
   ? 'http://localhost:3001/fetch?url='
-  : '/.netlify/functions/fetch?url=';
+  : '/fetch?url=';
 
 export function isUrl(text) {
   return /^https?:\/\//i.test(text.trim());

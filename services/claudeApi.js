@@ -8,7 +8,7 @@ const CLAUDE_API_URL = Platform.OS !== 'web'
   ? 'https://api.anthropic.com/v1/messages'
   : isLocalhost
     ? 'http://localhost:3001/claude'
-    : '/.netlify/functions/claude';
+    : '/claude';
 
 const API_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_KEY;
 
