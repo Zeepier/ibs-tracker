@@ -67,6 +67,10 @@ export default function FoodEntryScreen({ navigation }) {
   const [analysis, setAnalysis] = useState(null);
   const [fetchedContent, setFetchedContent] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const now = new Date();
+  const [dayOffset, setDayOffset] = useState(0);
+  const [hour, setHour] = useState(now.getHours());
+  const [minute, setMinute] = useState(now.getMinutes());
   const debounceRef = useRef(null);
 
   const onDescriptionChange = text => {
@@ -120,7 +124,10 @@ export default function FoodEntryScreen({ navigation }) {
   };
 
   const save = async () => {
-    await saveFoodEntry({ timestamp: new Date().toISOString(), description, analysis });
+    const d = new Date();
+    d.setDate(d.getDate() - dayOffset);
+    d.setHours(hour, minute, 0, 0);
+    await saveFoodEntry({ timestamp: d.toISOString(), description, analysis });
     await saveMealToLibrary({ description, analysis });
     Alert.alert('Saved!', 'Food entry logged successfully');
     navigation.goBack();
@@ -256,6 +263,57 @@ export default function FoodEntryScreen({ navigation }) {
                 );
               })}
             </View>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>When did you eat this?</Text>
+              <View style={styles.dayRow}>
+                {[
+                  { label: 'Today', off: 0 },
+                  { label: 'Yesterday', off: 1 },
+                  { label: '2 days ago', off: 2 },
+                  { label: '3 days ago', off: 3 },
+                ].map(d => (
+                  <TouchableOpacity
+                    key={d.off}
+                    style={[styles.dayChip, dayOffset === d.off && styles.dayChipSelected]}
+                    onPress={() => setDayOffset(d.off)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.dayChipText, dayOffset === d.off && styles.dayChipTextSelected]}>{d.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.timePickerLabel}>Hour</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timeScroll}>
+                {Array.from({ length: 24 }, (_, h) => h).map(h => (
+                  <TouchableOpacity
+                    key={h}
+                    style={[styles.timeChip, hour === h && styles.timeChipSelected]}
+                    onPress={() => setHour(h)}
+                  >
+                    <Text style={[styles.timeChipText, hour === h && styles.timeChipTextSelected]}>
+                      {String(h).padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.timePickerLabel}>Minute</Text>
+              <View style={styles.minuteRow}>
+                {[0, 15, 30, 45].map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.timeChip, minute === m && styles.timeChipSelected]}
+                    onPress={() => setMinute(m)}
+                  >
+                    <Text style={[styles.timeChipText, minute === m && styles.timeChipTextSelected]}>
+                      {String(m).padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.secondaryBtn} onPress={reset} activeOpacity={0.85}>
                 <Text style={styles.secondaryBtnText}>Re-analyse</Text>
@@ -325,6 +383,26 @@ const styles = StyleSheet.create({
     flex: 2, backgroundColor: C.primary, borderRadius: 14,
     padding: 16, alignItems: 'center',
   },
+
+  // Date/time picker
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
+  dayChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: '#F5F5F5', borderWidth: 1.5, borderColor: 'transparent',
+  },
+  dayChipSelected: { backgroundColor: C.primaryLight, borderColor: C.primary },
+  dayChipText: { fontSize: 13, color: C.sub },
+  dayChipTextSelected: { color: C.primary, fontWeight: '700' },
+  timePickerLabel: { fontSize: 11, fontWeight: '700', color: C.muted, letterSpacing: 0.8, marginTop: 12, marginBottom: 8, textTransform: 'uppercase' },
+  timeScroll: { flexDirection: 'row' },
+  minuteRow: { flexDirection: 'row', gap: 8 },
+  timeChip: {
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: '#F5F5F5', marginRight: 6, borderWidth: 1.5, borderColor: 'transparent',
+  },
+  timeChipSelected: { backgroundColor: C.primaryLight, borderColor: C.primary },
+  timeChipText: { fontSize: 15, color: C.sub },
+  timeChipTextSelected: { color: C.primary, fontWeight: '700' },
 
   // Meal suggestions
   suggestionsCard: {
