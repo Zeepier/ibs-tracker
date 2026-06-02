@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { restoreFromBackup } from './services/storage';
 
 // Register push notification service worker for PWA
 if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -16,6 +18,17 @@ import SettingsScreen from './screens/SettingsScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    // On first launch with no local data, try to restore from cloud backup
+    if (Platform.OS === 'web') {
+      AsyncStorage.getItem('foodEntries').then(existing => {
+        if (!existing || JSON.parse(existing).length === 0) {
+          restoreFromBackup();
+        }
+      });
+    }
+  }, []);
+
   return (
     <NavigationContainer>
       <Stack.Navigator

@@ -1,4 +1,57 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+
+// ── Cloud backup ──────────────────────────────────────────────────────────────
+
+async function getUserId() {
+  let id = await AsyncStorage.getItem('userId');
+  if (!id) {
+    id = 'user_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    await AsyncStorage.setItem('userId', id);
+  }
+  return id;
+}
+
+const BACKUP_URL = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? null  // skip backup in local dev
+  : '/backup';
+
+export async function syncBackup() {
+  if (!BACKUP_URL) return;
+  try {
+    const userId = await getUserId();
+    const food = JSON.parse(await AsyncStorage.getItem('foodEntries') || '[]');
+    const symptoms = JSON.parse(await AsyncStorage.getItem('symptomEntries') || '[]');
+    const metrics = await AsyncStorage.getItem('symptomMetrics');
+    const reminders = await AsyncStorage.getItem('reminders');
+    await fetch(BACKUP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, data: { food, symptoms, metrics, reminders } }),
+    });
+  } catch (err) {
+    console.warn('Backup failed:', err.message);
+  }
+}
+
+export async function restoreFromBackup() {
+  if (!BACKUP_URL) return false;
+  try {
+    const userId = await getUserId();
+    const res = await fetch(`${BACKUP_URL}/${userId}`);
+    const json = await res.json();
+    if (!json.found) return false;
+    const { food, symptoms, metrics, reminders } = json.data;
+    if (food?.length)     await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
+    if (symptoms?.length) await AsyncStorage.setItem('symptomEntries', JSON.stringify(symptoms));
+    if (metrics)          await AsyncStorage.setItem('symptomMetrics', metrics);
+    if (reminders)        await AsyncStorage.setItem('reminders', reminders);
+    return true;
+  } catch (err) {
+    console.warn('Restore failed:', err.message);
+    return false;
+  }
+}
 
 // ── Symptom metrics config ────────────────────────────────────────────────────
 export const DEFAULT_METRICS = [
@@ -23,12 +76,14 @@ export async function saveFoodEntry(entry) {
   const existing = JSON.parse(await AsyncStorage.getItem('foodEntries') || '[]');
   existing.push(entry);
   await AsyncStorage.setItem('foodEntries', JSON.stringify(existing));
+  syncBackup();
 }
 
 export async function saveSymptomEntry(entry) {
   const existing = JSON.parse(await AsyncStorage.getItem('symptomEntries') || '[]');
   existing.push(entry);
   await AsyncStorage.setItem('symptomEntries', JSON.stringify(existing));
+  syncBackup();
 }
 
 export async function getAllEntries() {

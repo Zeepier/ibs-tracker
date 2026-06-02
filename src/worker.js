@@ -17,6 +17,14 @@ export default {
       return handleFetch(request);
     }
 
+    // Backup endpoints
+    if (url.pathname === '/backup' && request.method === 'POST') {
+      return handleBackupSave(request, env);
+    }
+    if (url.pathname.startsWith('/backup/') && request.method === 'GET') {
+      return handleBackupLoad(request, env);
+    }
+
     // Serve static assets with SPA fallback (for React Navigation routes)
     const assetResponse = await env.ASSETS.fetch(request);
     if (assetResponse.status === 404) {
@@ -56,6 +64,35 @@ async function handleClaude(request, env) {
       status: 500,
       headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
     });
+  }
+}
+
+async function handleBackupSave(request, env) {
+  try {
+    const { userId, data } = await request.json();
+    if (!userId || !data) return new Response('Missing userId or data', { status: 400 });
+    await env.IBS_BACKUP.put(`backup:${userId}`, JSON.stringify(data));
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders() });
+  }
+}
+
+async function handleBackupLoad(request, env) {
+  try {
+    const userId = request.url.split('/backup/')[1];
+    if (!userId) return new Response('Missing userId', { status: 400 });
+    const raw = await env.IBS_BACKUP.get(`backup:${userId}`);
+    if (!raw) return new Response(JSON.stringify({ found: false }), {
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+    return new Response(JSON.stringify({ found: true, data: JSON.parse(raw) }), {
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders() });
   }
 }
 

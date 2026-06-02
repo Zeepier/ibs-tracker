@@ -5,3 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "web-build"
+
+[[kv_namespaces]]
+binding = "IBS_BACKUP"
+id = "e734e11f0b6e4637a6ef4b1d0f478a58"
