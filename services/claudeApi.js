@@ -123,7 +123,7 @@ Rules for each field:
 - artificialSweeteners: MUST be exactly one of: Present, Absent
 - gluten: MUST be exactly one of: Present, Absent
 
-For each rating field also include a corresponding _reason field: one short sentence naming the specific ingredient(s) responsible and why they affect that category. Be specific to this meal, not generic.
+For each rating field also include a corresponding _reason field: one short sentence naming the specific ingredient(s) responsible and why they affect that category. Be specific to this meal, not generic. Do NOT mention any diseases, syndromes, or medical conditions — focus only on the food and its properties.
 
 Respond with ONLY this JSON, no extra text:
 {"description":"...","fiber":"...","fiber_reason":"...","fodmap":"...","fodmap_reason":"...","histamine":"...","histamine_reason":"...","fructose":"...","fructose_reason":"...","lactose":"...","lactose_reason":"...","fat":"...","fat_reason":"...","spice":"...","spice_reason":"...","caffeine":"...","caffeine_reason":"...","alcohol":"...","alcohol_reason":"...","artificialSweeteners":"...","artificialSweeteners_reason":"...","gluten":"...","gluten_reason":"..."}`;
