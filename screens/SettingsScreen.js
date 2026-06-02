@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch, TextInput } from 'react-native';
 import { requestPermissions, loadReminders, saveReminders } from '../services/notifications';
 import { requestPushPermission, isPushSubscribed } from '../services/pushNotifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { loadSymptomMetrics, saveSymptomMetrics, DEFAULT_METRICS } from '../services/storage';
 
@@ -174,7 +175,20 @@ export default function SettingsScreen() {
   const updateReminders = async updated => {
     setReminders(updated);
     await saveReminders(updated);
-    if (Platform.OS === 'web') await subscribeWebPush(updated);
+    if (Platform.OS === 'web') {
+      const userId = await AsyncStorage.getItem('userId');
+      if (userId) {
+        try {
+          await fetch('/save-reminders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, reminders: updated }),
+          });
+        } catch (err) {
+          console.warn('Failed to sync reminders to server:', err);
+        }
+      }
+    }
   };
   const updateOneReminder = (i, changes) =>
     updateReminders(reminders.map((r, j) => j === i ? { ...r, ...changes } : r));
