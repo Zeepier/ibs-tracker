@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch, TextInput } from 'react-native';
-import { requestPermissions, loadReminders, saveReminders, subscribeWebPush } from '../services/notifications';
+import { requestPermissions, loadReminders, saveReminders } from '../services/notifications';
+import { requestPushPermission, isPushSubscribed } from '../services/pushNotifications';
 import { Platform } from 'react-native';
 import { loadSymptomMetrics, saveSymptomMetrics, DEFAULT_METRICS } from '../services/storage';
 
@@ -32,10 +33,20 @@ function ReminderCard({ reminder, onChange, onDelete }) {
 
   const toggleEnabled = async value => {
     if (value) {
-      const granted = await requestPermissions();
-      if (!granted) {
-        Alert.alert('Permission required', 'Please allow notifications in your device settings.');
-        return;
+      let granted = false;
+      if (Platform.OS === 'web') {
+        const result = await requestPushPermission();
+        granted = result.granted;
+        if (!granted) {
+          Alert.alert('Permission required', result.error || 'Could not enable push notifications.');
+          return;
+        }
+      } else {
+        granted = await requestPermissions();
+        if (!granted) {
+          Alert.alert('Permission required', 'Please allow notifications in your device settings.');
+          return;
+        }
       }
     }
     update({ enabled: value });
