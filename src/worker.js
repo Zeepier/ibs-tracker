@@ -25,6 +25,14 @@ export default {
       return handleBackupLoad(request, env);
     }
 
+    // Push notification endpoints
+    if (url.pathname === '/save-subscription' && request.method === 'POST') {
+      return handleSaveSubscription(request, env);
+    }
+    if (url.pathname === '/send-push' && request.method === 'POST') {
+      return handleSendPush(request, env);
+    }
+
     // Serve static assets with SPA fallback (for React Navigation routes)
     const assetResponse = await env.ASSETS.fetch(request);
     if (assetResponse.status === 404) {
@@ -89,6 +97,42 @@ async function handleBackupLoad(request, env) {
       headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
     });
     return new Response(JSON.stringify({ found: true, data: JSON.parse(raw) }), {
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders() });
+  }
+}
+
+async function handleSaveSubscription(request, env) {
+  try {
+    const { userId, subscription } = await request.json();
+    if (!userId || !subscription) return new Response('Missing userId or subscription', { status: 400 });
+    await env.IBS_BACKUP.put(`sub:${userId}`, JSON.stringify(subscription), { expirationTtl: 2592000 }); // 30 days
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders() });
+  }
+}
+
+async function handleSendPush(request, env) {
+  try {
+    const webpush = require('web-push');
+    webpush.setVapidDetails(env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY || '', env.VAPID_PRIVATE_KEY);
+    const { userId, title, body } = await request.json();
+    const subRaw = await env.IBS_BACKUP.get(`sub:${userId}`);
+    if (!subRaw) return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders() });
+    const subscription = JSON.parse(subRaw);
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify({ title, body }));
+    } catch (err) {
+      if (err.statusCode === 410) {
+        await env.IBS_BACKUP.delete(`sub:${userId}`);
+      }
+    }
+    return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
     });
   } catch (err) {
