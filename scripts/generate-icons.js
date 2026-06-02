@@ -1,8 +1,6 @@
 /**
- * Generates PWA icons using pngjs (already a transitive dep).
- * Produces icon-192.png and icon-512.png in web-build/.
- *
- * Design: deep-green rounded square, white stylised gut (inverted-U tube) + 3 tracking dots.
+ * Generates PWA icons using pngjs.
+ * Design: deep-green rounded square, white leaf with midrib + side veins, small stem.
  */
 
 const path = require('path');
@@ -22,80 +20,108 @@ function inRoundedRect(x, y, size, R) {
   return (x - cx) ** 2 + (y - cy) ** 2 <= R * R;
 }
 
-function setPixel(data, size, x, y, r, g, b, a) {
-  if (x < 0 || x >= size || y < 0 || y >= size) return;
-  const i = (y * size + x) * 4;
-  data[i] = r; data[i + 1] = g; data[i + 2] = b; data[i + 3] = a;
+// ── leaf shape: pointed ellipse (more pointed at top) ─────────────────────────
+
+function inLeaf(x, y, cx, cy, halfW, halfH) {
+  const u = (x - cx) / halfW;
+  const v = (y - cy) / halfH;
+  if (v < -1 || v > 1) return false;
+  const vNorm = (v + 1) / 2; // 0 at top, 1 at bottom
+  const power = vNorm < 0.5 ? 0.55 : 0.9; // pointier at top, rounder at bottom
+  const maxU = Math.pow(Math.sin(Math.PI * vNorm), power);
+  return Math.abs(u) <= maxU;
 }
 
 // ── icon generator ─────────────────────────────────────────────────────────────
 
 function createIcon(size) {
   const png = new PNG({ width: size, height: size });
-  const d   = size / 512;   // scale factor
+  const s = size / 512;
 
-  // Layout (at 512px, scaled by d)
-  const R         = Math.round(96  * d);   // background corner radius
-  const leftX     = Math.round(156 * d);
-  const rightX    = Math.round(356 * d);
-  const arcCX     = Math.round(256 * d);
-  const arcCY     = Math.round(210 * d);   // centre of the top dome
-  const arcR      = Math.round(100 * d);   // (rightX-leftX)/2
-  const legBottom = Math.round(390 * d);
-  const sw        = Math.round(52  * d);   // stroke width
-  const hs        = sw / 2;
+  // Background
+  const R = Math.round(96 * s);
 
-  const dotR  = Math.round(22  * d);
-  const dotY  = Math.round(438 * d);
-  const dots  = [
-    { x: Math.round(176 * d), y: dotY },
-    { x: Math.round(256 * d), y: dotY },
-    { x: Math.round(336 * d), y: dotY },
+  // Leaf parameters
+  const leafCX  = Math.round(256 * s);
+  const leafCY  = Math.round(220 * s);  // slightly above center
+  const leafW   = Math.round(118 * s);  // half-width
+  const leafH   = Math.round(168 * s);  // half-height
+
+  // Stem: rectangle below leaf
+  const stemX1  = Math.round(245 * s);
+  const stemX2  = Math.round(267 * s);
+  const stemY1  = Math.round(leafCY + leafH - 4 * s);
+  const stemY2  = Math.round(leafCY + leafH + 55 * s);
+
+  // Midrib: thin line through leaf center
+  const midribW = Math.max(1, Math.round(9 * s));
+
+  // Side veins: 4 pairs
+  const veins = [
+    { py: -0.55, angle: 38 }, // upper pair
+    { py: -0.2,  angle: 42 },
+    { py:  0.15, angle: 40 },
+    { py:  0.48, angle: 35 }, // lower pair
   ];
+  const veinW = Math.max(1, Math.round(5 * s));
+  const veinLen = Math.round(62 * s);
+
+  // BG colours
+  const BG = [46, 125, 50];    // #2E7D32
+  const LEAF = [255, 255, 255]; // white
+  const VEIN = [46, 125, 50];  // dark green veins on white leaf
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const idx = (y * size + x) * 4;
 
-      // Outside the rounded-square background → transparent
       if (!inRoundedRect(x, y, size, R)) {
-        png.data[idx] = png.data[idx + 1] = png.data[idx + 2] = png.data[idx + 3] = 0;
+        png.data[idx] = png.data[idx+1] = png.data[idx+2] = png.data[idx+3] = 0;
         continue;
       }
 
-      // Default: green background  #2E7D32 = 46,125,50
-      let r = 46, g = 125, b = 50;
+      let r = BG[0], g = BG[1], b = BG[2];
 
-      // ── white gut shape ──────────────────────────────────────────────────────
+      // ── stem ──────────────────────────────────────────────────────────────
+      const inStem = x >= stemX1 && x <= stemX2 && y >= stemY1 && y <= stemY2;
 
-      let white = false;
+      // ── leaf body ──────────────────────────────────────────────────────────
+      const isLeaf = inLeaf(x, y, leafCX, leafCY, leafW, leafH);
 
-      // Left vertical leg
-      if (!white && Math.abs(x - leftX) <= hs && y >= arcCY && y <= legBottom)
-        white = true;
-
-      // Right vertical leg
-      if (!white && Math.abs(x - rightX) <= hs && y >= arcCY && y <= legBottom)
-        white = true;
-
-      // Top dome arc (upper half of circle)
-      if (!white && y <= arcCY) {
-        const dist = Math.sqrt((x - arcCX) ** 2 + (y - arcCY) ** 2);
-        if (Math.abs(dist - arcR) <= hs) white = true;
+      if (isLeaf || inStem) {
+        r = LEAF[0]; g = LEAF[1]; b = LEAF[2];
       }
 
-      // Three tracking dots
-      if (!white) {
-        for (const dot of dots) {
-          if ((x - dot.x) ** 2 + (y - dot.y) ** 2 <= dotR * dotR) {
-            white = true; break;
+      // ── midrib (dark green line on leaf) ──────────────────────────────────
+      if (isLeaf && Math.abs(x - leafCX) <= midribW / 2) {
+        r = VEIN[0]; g = VEIN[1]; b = VEIN[2];
+      }
+
+      // ── side veins ────────────────────────────────────────────────────────
+      if (isLeaf) {
+        for (const v of veins) {
+          const veinY = leafCY + v.py * leafH;
+          const rad   = -v.angle * Math.PI / 180; // negative = veins angle upward
+          // Right vein
+          const dxR = x - leafCX;
+          const dyR = y - veinY;
+          const distR = Math.abs(-Math.sin(rad) * dxR + Math.cos(rad) * dyR);
+          const alongR = Math.cos(rad) * dxR + Math.sin(rad) * dyR;
+          if (dxR >= 0 && distR <= veinW / 2 && alongR >= 0 && alongR <= veinLen) {
+            r = VEIN[0]; g = VEIN[1]; b = VEIN[2];
+          }
+          // Left vein (mirror)
+          const dxL = x - leafCX;
+          const dyL = y - veinY;
+          const distL = Math.abs(Math.sin(rad) * dxL + Math.cos(rad) * dyL);
+          const alongL = Math.cos(rad) * (-dxL) + Math.sin(rad) * dyL;
+          if (dxL <= 0 && distL <= veinW / 2 && alongL >= 0 && alongL <= veinLen) {
+            r = VEIN[0]; g = VEIN[1]; b = VEIN[2];
           }
         }
       }
 
-      if (white) { r = 255; g = 255; b = 255; }
-
-      png.data[idx] = r; png.data[idx + 1] = g; png.data[idx + 2] = b; png.data[idx + 3] = 255;
+      png.data[idx] = r; png.data[idx+1] = g; png.data[idx+2] = b; png.data[idx+3] = 255;
     }
   }
   return png;
@@ -112,7 +138,6 @@ for (const size of [192, 512]) {
 }
 
 // ── patch manifest.json ────────────────────────────────────────────────────────
-// expo export:web regenerates manifest.json, so we fix it post-build
 
 const manifestPath = path.join(OUT, 'manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
@@ -125,4 +150,4 @@ manifest.prefer_related_applications = false;
 delete manifest.related_applications;
 
 fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-console.log('Patched manifest.json with icons and prefer_related_applications=false');
+console.log('Patched manifest.json');

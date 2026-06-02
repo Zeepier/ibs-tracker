@@ -67,6 +67,7 @@ export default function FoodEntryScreen({ navigation }) {
   const [analysis, setAnalysis] = useState(null);
   const [fetchedContent, setFetchedContent] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  const [expandedKey, setExpandedKey] = useState(null);
   const now = new Date();
   const [dayOffset, setDayOffset] = useState(0);
   const [hour, setHour] = useState(now.getHours());
@@ -247,17 +248,30 @@ export default function FoodEntryScreen({ navigation }) {
               <Text style={styles.cardLabel}>Analysis</Text>
               {Object.entries(FIELD_LABELS).map(([key, label]) => {
                 const val = analysis[key];
+                const reason = analysis[key + '_reason'];
                 const bg = RISK_BG[val];
                 const color = RISK_COLOR[val];
+                const isExpanded = expandedKey === key;
                 return (
-                  <View key={key} style={styles.resultRow}>
-                    <Text style={styles.resultLabel}>{label}</Text>
-                    {val ? (
-                      <View style={[styles.resultChip, { backgroundColor: bg || '#F5F5F5' }]}>
-                        <Text style={[styles.resultChipText, { color: color || C.sub }]}>{val}</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.resultEmpty}>—</Text>
+                  <View key={key} style={styles.resultBlock}>
+                    <View style={styles.resultRow}>
+                      <Text style={styles.resultLabel}>{label}</Text>
+                      {val ? (
+                        <TouchableOpacity
+                          onPress={() => setExpandedKey(isExpanded ? null : key)}
+                          activeOpacity={0.75}
+                          style={[styles.resultChip, { backgroundColor: bg || '#F5F5F5' }]}
+                        >
+                          <Text style={[styles.resultChipText, { color: color || C.sub }]}>
+                            {val} {reason ? (isExpanded ? '▲' : '▼') : ''}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.resultEmpty}>—</Text>
+                      )}
+                    </View>
+                    {isExpanded && reason && (
+                      <Text style={styles.reasonText}>{reason}</Text>
                     )}
                   </View>
                 );
@@ -365,9 +379,16 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 14, fontSize: 15, color: C.sub },
   summaryLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: C.blue, marginBottom: 6 },
   summaryText: { fontSize: 14, color: C.text, lineHeight: 21 },
+  resultBlock: {
+    borderBottomWidth: 1, borderBottomColor: C.divider,
+  },
   resultRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.divider,
+    paddingVertical: 10,
+  },
+  reasonText: {
+    fontSize: 12, color: C.sub, lineHeight: 17,
+    paddingBottom: 10, paddingHorizontal: 2, fontStyle: 'italic',
   },
   resultLabel: { fontSize: 14, color: C.sub },
   resultChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },

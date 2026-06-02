@@ -123,8 +123,10 @@ Rules for each field:
 - artificialSweeteners: MUST be exactly one of: Present, Absent
 - gluten: MUST be exactly one of: Present, Absent
 
+For each rating field also include a corresponding _reason field: one short sentence naming the specific ingredient(s) responsible and why they affect that category. Be specific to this meal, not generic.
+
 Respond with ONLY this JSON, no extra text:
-{"description":"...","fiber":"...","fodmap":"...","histamine":"...","fructose":"...","lactose":"...","fat":"...","spice":"...","caffeine":"...","alcohol":"...","artificialSweeteners":"...","gluten":"..."}`;
+{"description":"...","fiber":"...","fiber_reason":"...","fodmap":"...","fodmap_reason":"...","histamine":"...","histamine_reason":"...","fructose":"...","fructose_reason":"...","lactose":"...","lactose_reason":"...","fat":"...","fat_reason":"...","spice":"...","spice_reason":"...","caffeine":"...","caffeine_reason":"...","alcohol":"...","alcohol_reason":"...","artificialSweeteners":"...","artificialSweeteners_reason":"...","gluten":"...","gluten_reason":"..."}`;
 
   try {
    const response = await fetch(CLAUDE_API_URL, {
@@ -132,7 +134,7 @@ Respond with ONLY this JSON, no extra text:
   headers: { 'content-type': 'application/json' },
   body: JSON.stringify({
     model: 'claude-sonnet-4-6',
-    max_tokens: 512,
+    max_tokens: 1024,
     messages: [{ role: 'user', content: prompt }],
   }),
 });
