@@ -24,10 +24,12 @@ export async function syncBackup() {
     const symptoms = JSON.parse(await AsyncStorage.getItem('symptomEntries') || '[]');
     const metrics = await AsyncStorage.getItem('symptomMetrics');
     const reminders = await AsyncStorage.getItem('reminders');
+    const medications = await AsyncStorage.getItem('medications');
+    const medicationLog = await AsyncStorage.getItem('medicationLog');
     await fetch(BACKUP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, data: { food, symptoms, metrics, reminders } }),
+      body: JSON.stringify({ userId, data: { food, symptoms, metrics, reminders, medications, medicationLog } }),
     });
   } catch (err) {
     console.warn('Backup failed:', err.message);
@@ -41,11 +43,13 @@ export async function restoreFromBackup() {
     const res = await fetch(`${BACKUP_URL}/${userId}`);
     const json = await res.json();
     if (!json.found) return false;
-    const { food, symptoms, metrics, reminders } = json.data;
+    const { food, symptoms, metrics, reminders, medications, medicationLog } = json.data;
     if (food?.length)     await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
     if (symptoms?.length) await AsyncStorage.setItem('symptomEntries', JSON.stringify(symptoms));
     if (metrics)          await AsyncStorage.setItem('symptomMetrics', metrics);
     if (reminders)        await AsyncStorage.setItem('reminders', reminders);
+    if (medications)      await AsyncStorage.setItem('medications', medications);
+    if (medicationLog)    await AsyncStorage.setItem('medicationLog', medicationLog);
     return true;
   } catch (err) {
     console.warn('Restore failed:', err.message);

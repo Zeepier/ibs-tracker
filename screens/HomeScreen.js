@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { loadMedications, getMedicationLogForDate, logMedicationEntry } from '../services/medications';
 
 const C = {
   bg: '#F2F6F3',
@@ -11,6 +12,31 @@ const C = {
 };
 
 export default function HomeScreen({ navigation }) {
+  const [medications, setMedications] = useState([]);
+  const [medLog, setMedLog] = useState([]);
+
+  useEffect(() => {
+    loadMeds();
+    const unsubscribe = navigation.addListener('focus', loadMeds);
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadMeds = async () => {
+    const meds = await loadMedications();
+    const enabled = meds.filter(m => m.enabled);
+    setMedications(enabled);
+
+    const log = await getMedicationLogForDate(new Date());
+    setMedLog(log);
+  };
+
+  const handleMedToggle = async (med) => {
+    const loggedIds = medLog.map(e => e.medId);
+    const taken = !loggedIds.includes(med.id);
+    await logMedicationEntry(new Date(), med.id, taken);
+    await loadMeds();
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -39,6 +65,29 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.arrow}>›</Text>
       </TouchableOpacity>
 
+      {medications.length > 0 && (
+        <>
+          <Text style={styles.sectionLabel}>TODAY'S MEDICATIONS</Text>
+          {medications.map(med => {
+            const taken = medLog.some(e => e.medId === med.id);
+            return (
+              <TouchableOpacity
+                key={med.id}
+                style={[styles.medCard, taken && styles.medCardTaken]}
+                onPress={() => handleMedToggle(med)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.medCheckbox}>{taken ? '✓' : '○'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.medName, taken && styles.medNameTaken]}>{med.name}</Text>
+                  <Text style={styles.medDosage}>{med.dosage}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </>
+      )}
+
       <Text style={styles.sectionLabel}>REVIEW</Text>
 
       <TouchableOpacity style={[styles.card, styles.blueCard]} onPress={() => navigation.navigate('History')} activeOpacity={0.85}>
@@ -48,6 +97,15 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.cardSub}>Browse entries, correlations & export data</Text>
         </View>
         <Text style={styles.arrow}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.card, styles.surfaceCard]} onPress={() => navigation.navigate('Medications')} activeOpacity={0.85}>
+        <Text style={styles.cardIcon}>💊</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.cardTitle, { color: C.text }]}>Medications</Text>
+          <Text style={styles.cardSub}>Manage & track daily medications</Text>
+        </View>
+        <Text style={[styles.arrow, { color: C.muted }]}>›</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.card, styles.surfaceCard]} onPress={() => navigation.navigate('Settings')} activeOpacity={0.85}>
@@ -86,4 +144,40 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#FFF', marginBottom: 2 },
   cardSub: { fontSize: 12, color: 'rgba(255,255,255,0.72)', lineHeight: 17 },
   arrow: { fontSize: 26, color: 'rgba(255,255,255,0.5)', fontWeight: '300' },
+
+  medCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#EBEBEF',
+  },
+  medCardTaken: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#2E7D32',
+  },
+  medCheckbox: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2E7D32',
+    width: 24,
+    textAlign: 'center',
+  },
+  medName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.text,
+    marginBottom: 2,
+  },
+  medNameTaken: {
+    color: '#2E7D32',
+  },
+  medDosage: {
+    fontSize: 12,
+    color: C.muted,
+  },
 });
