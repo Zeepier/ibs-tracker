@@ -4,7 +4,7 @@ import { requestPermissions, loadReminders, saveReminders } from '../services/no
 import { requestPushPermission, isPushSubscribed } from '../services/pushNotifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { loadSymptomMetrics, saveSymptomMetrics, DEFAULT_METRICS } from '../services/storage';
+import { loadSymptomMetrics, saveSymptomMetrics, DEFAULT_METRICS, reanalyzeAllFood } from '../services/storage';
 
 const C = {
   bg: '#F2F6F3',
@@ -165,6 +165,8 @@ export default function SettingsScreen() {
   const [metrics, setMetrics] = useState([]);
   const [addingMetric, setAddingMetric] = useState(false);
   const [newLabel, setNewLabel] = useState('');
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyzeProgress, setReanalyzeProgress] = useState({ done: 0, total: 0 });
 
   useEffect(() => {
     loadReminders().then(setReminders);
@@ -232,6 +234,36 @@ export default function SettingsScreen() {
       { text: 'Cancel', style: 'cancel' },
       { text: 'Reset', style: 'destructive', onPress: () => updateMetrics(DEFAULT_METRICS) },
     ]);
+  };
+
+  const runReanalysis = async () => {
+    setReanalyzing(true);
+    setReanalyzeProgress({ done: 0, total: 0 });
+    try {
+      const { total, failed } = await reanalyzeAllFood((done, total) => {
+        setReanalyzeProgress({ done, total });
+      });
+      Alert.alert(
+        'Re-analysis complete',
+        failed > 0
+          ? `Updated ${total - failed} of ${total} entries. ${failed} could not be analysed and kept their previous scores.`
+          : `All ${total} entries updated with fresh 1-10 scores.`
+      );
+    } catch (err) {
+      Alert.alert('Re-analysis failed', err.message);
+    }
+    setReanalyzing(false);
+  };
+
+  const confirmReanalysis = () => {
+    Alert.alert(
+      'Re-analyse all meals?',
+      'This re-runs every saved meal through the AI to replace the rough migrated scores with precise 1-10 ratings. It uses one API call per meal and may take a minute. Your descriptions are unchanged.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Re-analyse', onPress: runReanalysis },
+      ]
+    );
   };
 
   return (
@@ -311,6 +343,26 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       )}
 
+      {/* ── Data section ── */}
+      <View style={styles.divider} />
+      <Text style={styles.sectionTitle}>Data</Text>
+      <Text style={styles.sectionHint}>
+        Re-analyse all saved meals to upgrade older entries from rough scores to precise 1-10 FODMAP &amp; histamine ratings.
+      </Text>
+
+      <TouchableOpacity
+        style={[styles.reanalyzeBtn, reanalyzing && styles.reanalyzeBtnDisabled]}
+        onPress={confirmReanalysis}
+        disabled={reanalyzing}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.reanalyzeBtnText}>
+          {reanalyzing
+            ? `Re-analysing… ${reanalyzeProgress.done}/${reanalyzeProgress.total}`
+            : 'Re-analyse all meals'}
+        </Text>
+      </TouchableOpacity>
+
     </ScrollView>
   );
 }
@@ -319,6 +371,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   content: { padding: 16, paddingBottom: 48 },
+  reanalyzeBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  reanalyzeBtnDisabled: { opacity: 0.6 },
+  reanalyzeBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
   sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   sectionTitle: { fontSize: 20, fontWeight: '800', color: C.text },
   sectionHint: { fontSize: 13, color: C.muted, lineHeight: 19, marginBottom: 14 },

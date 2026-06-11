@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { analyzeFoodWithClaude } from './claudeApi';
 
 // ── Cloud backup ──────────────────────────────────────────────────────────────
 
@@ -77,6 +78,41 @@ function convertOldScoreToNumeric(oldScore) {
     'High': 8,
   };
   return map[oldScore] || 5;
+}
+
+// ── Re-analyse all existing food entries for granular scores ──────────────────
+// Re-runs each stored description through Claude to replace bucketed migration
+// scores (2/5/8) with true 1-10 granularity. Calls onProgress(done, total).
+export async function reanalyzeAllFood(onProgress) {
+  const food = JSON.parse(await AsyncStorage.getItem('foodEntries') || '[]');
+  const total = food.length;
+  let done = 0;
+  let failed = 0;
+
+  for (const entry of food) {
+    if (!entry.description || !entry.description.trim()) {
+      done++;
+      if (onProgress) onProgress(done, total, failed);
+      continue;
+    }
+    try {
+      const fresh = await analyzeFoodWithClaude(entry.description);
+      // Replace analysis but preserve the identified description if the new
+      // one is empty for any reason.
+      entry.analysis = { ...entry.analysis, ...fresh };
+    } catch (err) {
+      failed++;
+      console.warn(`Re-analysis failed for "${entry.description}":`, err.message);
+    }
+    done++;
+    if (onProgress) onProgress(done, total, failed);
+    // Save incrementally so progress is never lost if interrupted
+    await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
+  }
+
+  await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
+  syncBackup();
+  return { total, failed };
 }
 
 export async function restoreFromBackup() {
