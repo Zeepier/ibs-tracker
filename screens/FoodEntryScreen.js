@@ -31,6 +31,13 @@ const RISK_COLOR = {
   Low: C.low, None: C.low, Absent: C.low,
 };
 
+// Get color for numeric score (1-10)
+function getNumericColor(score) {
+  if (score <= 3) return { bg: '#E8F5E9', color: C.low };      // Green (Low)
+  if (score <= 6) return { bg: '#FFF3E0', color: C.med };      // Orange (Medium)
+  return { bg: '#FFEBEE', color: C.high };                     // Red (High)
+}
+
 const FIELD_LABELS = {
   fodmap: 'FODMAP',
   histamine: 'Histamine',
@@ -249,21 +256,31 @@ export default function FoodEntryScreen({ navigation }) {
               {Object.entries(FIELD_LABELS).map(([key, label]) => {
                 const val = analysis[key];
                 const reason = analysis[key + '_reason'];
-                const bg = RISK_BG[val];
-                const color = RISK_COLOR[val];
+                const isNumeric = key === 'fodmap' || key === 'histamine';
+                let bg, color;
+
+                if (isNumeric && typeof val === 'number') {
+                  const numColor = getNumericColor(val);
+                  bg = numColor.bg;
+                  color = numColor.color;
+                } else {
+                  bg = RISK_BG[val];
+                  color = RISK_COLOR[val];
+                }
+
                 const isExpanded = expandedKey === key;
                 return (
                   <View key={key} style={styles.resultBlock}>
                     <View style={styles.resultRow}>
                       <Text style={styles.resultLabel}>{label}</Text>
-                      {val ? (
+                      {val || val === 0 ? (
                         <TouchableOpacity
                           onPress={() => setExpandedKey(isExpanded ? null : key)}
                           activeOpacity={0.75}
                           style={[styles.resultChip, { backgroundColor: bg || '#F5F5F5' }]}
                         >
                           <Text style={[styles.resultChipText, { color: color || C.sub }]}>
-                            {val} {reason ? (isExpanded ? '▲' : '▼') : ''}
+                            {isNumeric && typeof val === 'number' ? `${val}/10` : val} {reason ? (isExpanded ? '▲' : '▼') : ''}
                           </Text>
                         </TouchableOpacity>
                       ) : (

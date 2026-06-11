@@ -36,6 +36,49 @@ export async function syncBackup() {
   }
 }
 
+// ── Migration: Convert old High/Med/Low FODMAP/Histamine to numeric 1-10 ────
+
+export async function migrateToNumericScores() {
+  try {
+    const food = JSON.parse(await AsyncStorage.getItem('foodEntries') || '[]');
+    let updated = false;
+
+    for (const entry of food) {
+      if (!entry.analysis) continue;
+
+      // Convert old categorical scores to numeric if needed
+      if (typeof entry.analysis.fodmap === 'string') {
+        entry.analysis.fodmap = convertOldScoreToNumeric(entry.analysis.fodmap);
+        updated = true;
+      }
+      if (typeof entry.analysis.histamine === 'string') {
+        entry.analysis.histamine = convertOldScoreToNumeric(entry.analysis.histamine);
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
+      syncBackup();
+      return { success: true, converted: food.length };
+    }
+    return { success: true, converted: 0 };
+  } catch (err) {
+    console.error('Migration failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+function convertOldScoreToNumeric(oldScore) {
+  // Convert High/Medium/Low to numeric 1-10
+  const map = {
+    'Low': 2,
+    'Medium': 5,
+    'High': 8,
+  };
+  return map[oldScore] || 5;
+}
+
 export async function restoreFromBackup() {
   if (!BACKUP_URL) return false;
   try {

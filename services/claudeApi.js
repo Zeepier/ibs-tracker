@@ -112,8 +112,8 @@ FOOD TO ANALYZE: "${textDescription || 'Unknown food'}"
 Rules for each field:
 - description: 1 sentence listing the main ingredients you identified
 - fiber: MUST be exactly one of: Low, Medium, High
-- fodmap: MUST be exactly one of: Low, Medium, High (use the FODMAP reference above)
-- histamine: MUST be exactly one of: Low, Medium, High (use the histamine reference above)
+- fodmap: MUST be an integer from 1-10 (1=lowest FODMAP, 10=highest FODMAP)
+- histamine: MUST be an integer from 1-10 (1=lowest histamine, 10=highest histamine)
 - fructose: MUST be exactly one of: Low, Medium, High
 - lactose: MUST be exactly one of: None, Low, Medium, High
 - fat: MUST be exactly one of: Low, Medium, High
@@ -123,10 +123,24 @@ Rules for each field:
 - artificialSweeteners: MUST be exactly one of: Present, Absent
 - gluten: MUST be exactly one of: Present, Absent
 
-For each rating field also include a corresponding _reason field: one short sentence naming the specific ingredient(s) responsible and why they affect that category. Be specific to this meal, not generic. Do NOT mention any diseases, syndromes, or medical conditions — focus only on the food and its properties.
+FODMAP Scale (1-10):
+1-2: None/negligible (white rice, banana, carrot)
+3-4: Low (oats, cucumber, grapes, gluten-free bread)
+5-6: Medium (ripe banana, sweet potato in moderate amounts)
+7-8: High (wheat pasta, cow's milk, most fruits)
+9-10: Very High (garlic, onion, honey, beans, apples)
+
+HISTAMINE Scale (1-10):
+1-2: None/negligible (fresh meat, rice, most vegetables except spinach/eggplant)
+3-4: Low (fresh fish, eggs, fresh herbs)
+5-6: Medium (fermented foods in small amounts, aged cheese in small amounts)
+7-8: High (canned/smoked fish, processed meats, fermented vegetables)
+9-10: Very High (aged cheeses, cured meats, all fermented foods consumed liberally, alcohol)
+
+For each rating field also include a corresponding _reason field: one short sentence naming the specific ingredient(s) responsible and the score justification. Be specific to this meal. Do NOT mention diseases or syndromes — focus only on the food properties.
 
 Respond with ONLY this JSON, no extra text:
-{"description":"...","fiber":"...","fiber_reason":"...","fodmap":"...","fodmap_reason":"...","histamine":"...","histamine_reason":"...","fructose":"...","fructose_reason":"...","lactose":"...","lactose_reason":"...","fat":"...","fat_reason":"...","spice":"...","spice_reason":"...","caffeine":"...","caffeine_reason":"...","alcohol":"...","alcohol_reason":"...","artificialSweeteners":"...","artificialSweeteners_reason":"...","gluten":"...","gluten_reason":"..."}`;
+{"description":"...","fiber":"...","fiber_reason":"...","fodmap":X,"fodmap_reason":"...","histamine":X,"histamine_reason":"...","fructose":"...","fructose_reason":"...","lactose":"...","lactose_reason":"...","fat":"...","fat_reason":"...","spice":"...","spice_reason":"...","caffeine":"...","caffeine_reason":"...","alcohol":"...","alcohol_reason":"...","artificialSweeteners":"...","artificialSweeteners_reason":"...","gluten":"...","gluten_reason":"..."}`;
 
   try {
    const response = await fetch(CLAUDE_API_URL, {

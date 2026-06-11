@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { restoreFromBackup } from './services/storage';
+import { restoreFromBackup, migrateToNumericScores } from './services/storage';
 
 // Register push notification service worker for PWA
 if (Platform.OS === 'web' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -20,13 +20,18 @@ const Stack = createStackNavigator();
 
 export default function App() {
   useEffect(() => {
-    // On first launch with no local data, try to restore from cloud backup
+    // On app startup: restore backup if needed, then migrate to numeric scores
     if (Platform.OS === 'web') {
-      AsyncStorage.getItem('foodEntries').then(existing => {
+      AsyncStorage.getItem('foodEntries').then(async (existing) => {
         if (!existing || JSON.parse(existing).length === 0) {
-          restoreFromBackup();
+          await restoreFromBackup();
         }
+        // Run migration to convert old scores to numeric
+        await migrateToNumericScores();
       });
+    } else {
+      // Also run migration on native platforms
+      migrateToNumericScores();
     }
   }, []);
 
