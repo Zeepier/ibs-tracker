@@ -243,27 +243,28 @@ export default function SettingsScreen() {
       const { total, failed } = await reanalyzeAllFood((done, total) => {
         setReanalyzeProgress({ done, total });
       });
-      Alert.alert(
-        'Re-analysis complete',
-        failed > 0
-          ? `Updated ${total - failed} of ${total} entries. ${failed} could not be analysed and kept their previous scores.`
-          : `All ${total} entries updated with fresh 1-10 scores.`
-      );
+      const msg = failed > 0
+        ? `Updated ${total - failed} of ${total} entries. ${failed} could not be analysed and kept their previous scores.`
+        : `All ${total} entries updated with fresh 1-10 scores.`;
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Re-analysis complete', msg);
     } catch (err) {
-      Alert.alert('Re-analysis failed', err.message);
+      if (Platform.OS === 'web') window.alert('Re-analysis failed: ' + err.message);
+      else Alert.alert('Re-analysis failed', err.message);
     }
     setReanalyzing(false);
   };
 
   const confirmReanalysis = () => {
-    Alert.alert(
-      'Re-analyse all meals?',
-      'This re-runs every saved meal through the AI to replace the rough migrated scores with precise 1-10 ratings. It uses one API call per meal and may take a minute. Your descriptions are unchanged.',
-      [
+    const message = 'Re-analyse all meals?\n\nThis re-runs every saved meal through the AI to replace the rough migrated scores with precise 1-10 ratings. It uses one API call per meal and may take a minute. Your descriptions are unchanged.';
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) runReanalysis();
+    } else {
+      Alert.alert('Re-analyse all meals?', message, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Re-analyse', onPress: runReanalysis },
-      ]
-    );
+      ]);
+    }
   };
 
   return (
