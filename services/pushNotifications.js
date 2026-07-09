@@ -60,20 +60,19 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export async function sendTestPush() {
-  if (Platform.OS !== 'web') return;
+  if (Platform.OS !== 'web') return { ok: false };
   try {
     const userId = await AsyncStorage.getItem('userId');
-    if (!userId) return;
-    await fetch(`${PUSH_ENDPOINT}/send-push`, {
+    if (!userId) return { ok: false };
+    const res = await fetch(`${PUSH_ENDPOINT}/send-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        title: 'IBS Tracker',
-        body: 'Test notification',
-      }),
+      body: JSON.stringify({ userId }),
     });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok && data.ok !== false, data };
   } catch (err) {
     console.error('Send test push failed:', err);
+    return { ok: false, error: err.message };
   }
 }

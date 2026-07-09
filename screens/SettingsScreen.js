@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Switch, TextInput } from 'react-native';
 import { requestPermissions, loadReminders, saveReminders } from '../services/notifications';
-import { requestPushPermission, isPushSubscribed } from '../services/pushNotifications';
+import { requestPushPermission, isPushSubscribed, sendTestPush } from '../services/pushNotifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { loadSymptomMetrics, saveSymptomMetrics, DEFAULT_METRICS, reanalyzeAllFood } from '../services/storage';
@@ -184,7 +184,7 @@ export default function SettingsScreen() {
           await fetch('/save-reminders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, reminders: updated }),
+            body: JSON.stringify({ userId, reminders: updated, tzOffset: new Date().getTimezoneOffset() }),
           });
         } catch (err) {
           console.warn('Failed to sync reminders to server:', err);
@@ -265,6 +265,20 @@ export default function SettingsScreen() {
         { text: 'Re-analyse', onPress: runReanalysis },
       ]);
     }
+  };
+
+  const testNotification = async () => {
+    const subscribed = await isPushSubscribed();
+    if (!subscribed) {
+      const msg = 'Enable a reminder first so notifications are switched on, then try the test.';
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Not enabled', msg);
+      return;
+    }
+    const res = await sendTestPush();
+    const msg = res && res.ok
+      ? 'Test sent — you should see a notification shortly.'
+      : 'Could not send the test notification. Make sure notifications are allowed for this site.';
+    if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Test notification', msg);
   };
 
   return (
@@ -363,6 +377,16 @@ export default function SettingsScreen() {
             : 'Re-analyse all meals'}
         </Text>
       </TouchableOpacity>
+
+      {Platform.OS === 'web' && (
+        <TouchableOpacity
+          style={[styles.addButton, { borderColor: C.blue, marginTop: 10 }]}
+          onPress={testNotification}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.addButtonText, { color: C.blue }]}>Send test notification</Text>
+        </TouchableOpacity>
+      )}
 
     </ScrollView>
   );
