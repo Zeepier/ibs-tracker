@@ -1,3 +1,5 @@
+const WORKER_VERSION = '1.1.0';
+
 export default {
   // Cloudflare cron trigger — invoked on the schedule in wrangler.toml
   async scheduled(event, env, ctx) {
@@ -10,6 +12,13 @@ export default {
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 200, headers: corsHeaders() });
+    }
+
+    // Version check — confirm which build is live
+    if (url.pathname === '/version') {
+      return new Response(JSON.stringify({ version: WORKER_VERSION }), {
+        headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+      });
     }
 
     // Manual reminder trigger (for testing the cron logic over HTTP)

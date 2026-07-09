@@ -5,6 +5,7 @@ import { requestPushPermission, isPushSubscribed, sendTestPush } from '../servic
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { loadSymptomMetrics, saveSymptomMetrics, DEFAULT_METRICS, reanalyzeAllFood } from '../services/storage';
+import { APP_VERSION } from '../constants/version';
 
 const C = {
   bg: '#F2F6F3',
@@ -388,6 +389,8 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       )}
 
+      <Text style={styles.versionText}>Version {APP_VERSION}</Text>
+
     </ScrollView>
   );
 }
@@ -399,6 +402,7 @@ const styles = StyleSheet.create({
   reanalyzeBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
   reanalyzeBtnDisabled: { opacity: 0.6 },
   reanalyzeBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  versionText: { textAlign: 'center', color: C.muted, fontSize: 12, marginTop: 24 },
   sectionTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   sectionTitle: { fontSize: 20, fontWeight: '800', color: C.text },
   sectionHint: { fontSize: 13, color: C.muted, lineHeight: 19, marginBottom: 14 },
