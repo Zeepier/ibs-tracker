@@ -82,33 +82,42 @@ function convertOldScoreToNumeric(oldScore) {
 
 // ── Re-analyse all existing food entries for granular scores ──────────────────
 // Re-runs each stored description through Claude to replace bucketed migration
-// scores (2/5/8) with true 1-10 granularity. Calls onProgress(done, total).
-export async function reanalyzeAllFood(onProgress) {
+// scores (2/5/8) with true 1-10 granularity. Runs several requests at once via a
+// small concurrency pool (kept modest to stay under API rate limits).
+// Calls onProgress(done, total, failed).
+export async function reanalyzeAllFood(onProgress, concurrency = 4) {
   const food = JSON.parse(await AsyncStorage.getItem('foodEntries') || '[]');
   const total = food.length;
   let done = 0;
   let failed = 0;
 
-  for (const entry of food) {
-    if (!entry.description || !entry.description.trim()) {
+  // Only entries with a usable description need an API call; the rest count done.
+  const queue = food
+    .map((entry, i) => ({ entry, i }))
+    .filter(({ entry }) => entry.description && entry.description.trim());
+  done = total - queue.length;
+  if (onProgress) onProgress(done, total, failed);
+
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < queue.length) {
+      const { entry } = queue[cursor++];
+      try {
+        const fresh = await analyzeFoodWithClaude(entry.description);
+        entry.analysis = { ...entry.analysis, ...fresh };
+      } catch (err) {
+        failed++;
+        console.warn(`Re-analysis failed for "${entry.description}":`, err.message);
+      }
       done++;
       if (onProgress) onProgress(done, total, failed);
-      continue;
+      // Save incrementally so progress survives an interruption
+      await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
     }
-    try {
-      const fresh = await analyzeFoodWithClaude(entry.description);
-      // Replace analysis but preserve the identified description if the new
-      // one is empty for any reason.
-      entry.analysis = { ...entry.analysis, ...fresh };
-    } catch (err) {
-      failed++;
-      console.warn(`Re-analysis failed for "${entry.description}":`, err.message);
-    }
-    done++;
-    if (onProgress) onProgress(done, total, failed);
-    // Save incrementally so progress is never lost if interrupted
-    await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
-  }
+  };
+
+  const pool = Array.from({ length: Math.min(concurrency, queue.length) }, worker);
+  await Promise.all(pool);
 
   await AsyncStorage.setItem('foodEntries', JSON.stringify(food));
   syncBackup();
