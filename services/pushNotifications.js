@@ -21,9 +21,22 @@ export async function requestPushPermission() {
     }
 
     const registration = await navigator.serviceWorker.ready;
+    const appServerKey = urlBase64ToUint8Array(process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY);
+
+    // If an old subscription exists (e.g. from a previous VAPID key), drop it —
+    // subscribing with a different applicationServerKey otherwise throws.
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) {
+      const sameKey =
+        existing.options &&
+        existing.options.applicationServerKey &&
+        new Uint8Array(existing.options.applicationServerKey).toString() === appServerKey.toString();
+      if (!sameKey) await existing.unsubscribe();
+    }
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY),
+      applicationServerKey: appServerKey,
     });
 
     // Save subscription to server

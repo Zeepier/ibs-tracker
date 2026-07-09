@@ -269,16 +269,20 @@ export default function SettingsScreen() {
   };
 
   const testNotification = async () => {
-    const subscribed = await isPushSubscribed();
-    if (!subscribed) {
-      const msg = 'Enable a reminder first so notifications are switched on, then try the test.';
+    // Ensure a live subscription exists (idempotent) — repairs reminders that
+    // were toggled on in older builds before the subscription flow worked.
+    const perm = await requestPushPermission();
+    if (!perm.granted) {
+      const msg = perm.error === 'User denied permission'
+        ? 'Notifications are blocked for this site. Allow them in your browser settings, then try again.'
+        : (perm.error || 'Could not enable notifications on this device.');
       if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Not enabled', msg);
       return;
     }
     const res = await sendTestPush();
     const msg = res && res.ok
       ? 'Test sent — you should see a notification shortly.'
-      : 'Could not send the test notification. Make sure notifications are allowed for this site.';
+      : 'Subscription registered, but the server could not send. Check the console for details.';
     if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Test notification', msg);
   };
 

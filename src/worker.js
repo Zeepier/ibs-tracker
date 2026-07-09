@@ -1,4 +1,4 @@
-const WORKER_VERSION = '1.1.0';
+const WORKER_VERSION = '1.1.1';
 
 export default {
   // Cloudflare cron trigger — invoked on the schedule in wrangler.toml
